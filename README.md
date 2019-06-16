@@ -4,10 +4,32 @@
 
 ## DataFrames
 
+* Advanced `read_csv()` options
+```python
+```
+
+* Reading in multiple files at once
+```python
+import glob
+
+df = pd.concat([pd.read_csv(f) for f in glob.glob("*.csv")])
+
+# More `read_csv()` options
+df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")])
+```
+
 ## Series
 
 ## Cleaning
 
 ## Feature Engineering
+
+* RFM - Recency, Frequency & Monetary
+```python
+```
+
+* Haversine
+```python
+```
 
 ## Aggregation
