@@ -20,7 +20,7 @@ df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")]
 
 ## Series
 
-## Cleaning
+## Creating New Columns
 
 ## Feature Engineering
 
