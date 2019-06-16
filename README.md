@@ -32,6 +32,11 @@ df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")]
 
 ## Feature Engineering
 
+* Value count of column
+```python
+df.groupby('some_dimension').transform(len)
+```
+
 * RFM - Recency, Frequency & Monetary
 ```python
 ```
