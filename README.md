@@ -38,4 +38,30 @@ df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")]
 
 * Haversine
 ```python
+import numpy as np
+from numpy import pi, deg2rad, cos, sin, arcsin, sqrt
+
+def haversine(s_lat, s_lng, e_lat, e_lng):
+    """
+    determines the great-circle distance between two point
+    on a sphere given their longitudes and latitudes
+    """
+
+    # approximate radius of earth in miles
+    R = 3959.87433
+
+    s_lat = s_lat * np.pi / 180.0
+    s_lng = np.deg2rad(s_lng)
+    e_lat = np.deg2rad(e_lat)
+    e_lng = np.deg2rad(e_lng)
+
+    d = (
+        np.sin((e_lat - s_lat) / 2) ** 2
+        + np.cos(s_lat) * np.cos(e_lat) * np.sin((e_lng - s_lng) / 2) ** 2
+    )
+
+    return 2 * R * np.arcsin(np.sqrt(d))
+
+# Convert pd.Series() -> np.ndarray()
+df['distance'] = haversine(df['start_lat'].values, df['start_long'].values, df['end_lat'].values, df['end_long'].values)
 ```
