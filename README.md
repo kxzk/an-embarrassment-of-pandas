@@ -10,6 +10,21 @@
 
 ## DataFrames
 
+* Options
+```python
+# See more columns
+pd.set_option("display.max_columns", 500)
+
+# See more rows
+pd.set_option("display.max_rows", 500)
+
+# Round floats to 3 decimal places, in lieu of scientific notation
+pd.set_option("display.float_format", lambda x: "%.3f" % x)
+
+# Increase column width
+pd.set_option('max_colwidth', 50)
+```
+
 * Advanced `read_csv()` options
 ```python
 ```
