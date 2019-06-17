@@ -4,6 +4,7 @@
 
 * [DataFrames](#dataframes)
 * [Series](#series)
+* [Method Chaining](#method-chaining)
 * [Aggregation](#aggregation)
 * [New Columns](#new-columns)
 * [Feature Engineering](#feature-engineering)
@@ -27,6 +28,13 @@ pd.set_option('max_colwidth', 50)
 
 * Advanced `read_csv()` options
 ```python
+pd.read_csv(
+    'some_data.csv',
+    skiprows = 2,
+    na_values = [],
+    parse_dates = [],
+    
+)
 ```
 
 * Reading in multiple files at once
@@ -39,17 +47,97 @@ df = pd.concat([pd.read_csv(f) for f in glob.glob("*.csv")])
 df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")])
 ```
 
+* Column headers
+```python
+```
+
+* Correlation between all
+```python
+df.corr()
+```
+
+* Filtering DataFrame - using `pd.Series.isin()`
+```python
+df[df['dimension'].isin(['A', 'B', 'C'])]
+```
+
+* Filtering DataFrame - using `df.query()`
+```python
+df.query('A > C')
+```
+
 ## Series
+
+## Method Chaining
 
 ## Aggregation
 
 ## New Columns
 
+* Based on one conditions - using `np.where()`
+```python
+np.where(df['gender'] == 'Male', 1, 0)
+```
+
+* Based on multiple conditions - using `np.where()`
+```python
+np.where(df['measure'] < 5, 'Low', np.where(df['measure'] < 10, 'Medium', 'High'))
+```
+
+* Based on multiple conditions - using `pd.cut()`
+```python
+```
+
+* Based on multiple conditions - using `np.select()`
+```python
+conditions 
+```
+
+* Based on multiple conditions - using `pd.Series.map()`
+```python
+values = {'Low': 1, 'Medium': 2, 'High': 3}
+
+df['dimension'].map(values)
+```
+
 ## Feature Engineering
 
-* Value count of column
+* Date and time
 ```python
-df.groupby('some_dimension').transform(len)
+```
+
+* Count occurence of dimension
+```python
+df.groupby('dimension', as_index = False).transform(len)
+
+# By another column
+df.groupby('dimension', as_index = False)['another_dimension'].transform(len)
+```
+
+* Count total of measure
+```python
+df.groupby('dimension', as_index = False)['measure'].sum()
+```
+
+* Aggregate statistics for numeric columns only
+```python
+df.groupby('dimension', as_index = False).agg(['count', 'mean', 'max', 'min', 'sum'])
+```
+
+* Binning numerical value
+```python
+pd.qcut(data['measure'], q = 4, labels = False)
+```
+
+* Dummy variables
+```python
+# Use `drop_first = True` to avoid multicollinearity
+pd.get_dummies(df, drop_first = True)
+```
+
+* Sort and take first value by some dimension
+```python
+df.sort_values(by = "variable").groupby("dimension", as_index = False).first()
 ```
 
 * RFM - Recency, Frequency & Monetary
