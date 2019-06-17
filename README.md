@@ -6,6 +6,7 @@ Why an embarrassment? Because it's the name for a [group of pandas!](https://www
 
 * [DataFrames](#dataframes)
 * [Series](#series)
+* [Missing Values](#missing-values)
 * [Method Chaining](#method-chaining)
 * [Aggregation](#aggregation)
 * [New Columns](#new-columns)
@@ -31,7 +32,7 @@ pd.set_option('max_colwidth', 50)
 * Useful `read_csv()` options
 ```python
 pd.read_csv(
-    'some_data.csv',
+    'data.csv',
     skiprows = 2,
     usecols = [],
     dtype = [],
@@ -55,6 +56,8 @@ df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")]
 ```python
 # Lower all values
 df.columns = [x.lower() for x in df.columns]
+
+df.columns = df.columns.str.replace("[^\w\s]", "").str.replace(" ", "_").str.lower()
 ```
 
 * Correlation between all
@@ -75,10 +78,28 @@ df[df['dimension'].str.contains('word')]
 * Filtering DataFrame - using `df.query()`
 ```python
 df.query('A > C')
+
+df.query("A == 'C'")
+
+# Query for null values
+df.query('value < 10 | value.isnull()', engine='python')
 ```
 
 * Joining
 ```python
+```
+
+* Descriptive statistics numbers
+```python
+df.describe(include=[np.number]).T
+```
+
+* Descriptive statistics dimensions
+```python
+df.describe(include=[pd.Categorical]).T
+
+# Add percent frequency for top dimension
+df["freq_total"] = df["freq"].div(df["count"])
 ```
 
 * Styling with dollar signs, commas and percent signs
@@ -102,20 +123,45 @@ df.style.background(subset = ['measure'], cmap = 'viridis')
 
 * Value counts as percentages
 ```python
-df['measure'].value_counts(normalize = True)
+# Use `dropna = False` to see NaN values
+df['measure'].value_counts(normalize = True, dropna = False)
+```
+
+## Missing Values
+
+* Replace null value with another column, else original column
+```python
+np.where(pd.isnull(df['dimension']), df['another_dimension'], df['dimension'])
+```
+
+* Replace numeric values containing a letter with null
+```python
+df["zipcode"].replace(".*[a-zA-Z].*", np.nan, regex=True)
 ```
 
 ## Method Chaining
 
 ```python
+(pd.read_csv('data.csv')
+    .set_index('customer_id')
+    .rename(columns = {'SALES': 'sales'})
+    .assign()
+    .sort_values()
+    .head())
 ```
 
 [Recommended Read - Effective Pandas](https://leanpub.com/effective-pandas)
 
 ## Aggregation
 
-* By month
+* By date offset - [full list of options](https://i.imgur.com/KHtdbpc.png)
 ```python
+# H for hours
+# D for days
+# W for weeks
+# WOM for week of month
+# Q for quarter end
+# A for year end
 df.groupby([pd.Grouper(key = 'date', freq = 'M')])['measure'].agg(['sum', 'mean'])
 ```
 
@@ -162,8 +208,14 @@ df['domain'] = [x.split('@')[1] for x in df['email']]
 
 ## Feature Engineering
 
-* Date and time
+* Extracting various date components
 ```python
+```
+
+* Months between two dates
+```python
+# Y for years
+df['first_date'].sub(df['second_date']).div(np.timedelta64(1, 'M'))
 ```
 
 * Count occurence of dimension
