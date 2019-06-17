@@ -2,6 +2,8 @@
 
 ![group-of-pandas](https://www.gannett-cdn.com/-mm-/8ec5d09776cb16d4fc0180df562106e57760eb95/c=0-148-4253-2551/local/-/media/2018/04/03/USATODAY/USATODAY/636583772913864667-XXX-PANDAS-PDS-00508-98906967.JPG?width=3200&height=1680&fit=crop)
 
+Why an embarrassment? Because it's the name for a [group of pandas!](https://www.reference.com/pets-animals/group-pandas-called-71cd65ea758ca2e2)
+
 * [DataFrames](#dataframes)
 * [Series](#series)
 * [Method Chaining](#method-chaining)
@@ -26,11 +28,13 @@ pd.set_option("display.float_format", lambda x: "%.3f" % x)
 pd.set_option('max_colwidth', 50)
 ```
 
-* Advanced `read_csv()` options
+* Useful `read_csv()` options
 ```python
 pd.read_csv(
     'some_data.csv',
     skiprows = 2,
+    usecols = [],
+    dtype = [],
     na_values = [],
     parse_dates = [],
     
@@ -49,6 +53,8 @@ df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")]
 
 * Column headers
 ```python
+# Lower all values
+df.columns = [x.lower() for x in df.columns]
 ```
 
 * Correlation between all
@@ -61,20 +67,61 @@ df.corr()
 df[df['dimension'].isin(['A', 'B', 'C'])]
 ```
 
+* Filtering DataFrame - using `pd.Series.str.contains()`
+```python
+df[df['dimension'].str.contains('word')]
+```
+
 * Filtering DataFrame - using `df.query()`
 ```python
 df.query('A > C')
 ```
 
+* Joining
+```python
+```
+
+* Styling with dollar signs, commas and percent signs
+```python
+styling_options = {'sales': '${0:,.0f}', 'percent_of_sales': '{:.2%f}'}
+
+df.style.format(styling_options)
+```
+
+* Add highlighting for max and min values
+```python
+df.style.highlight_max(color = 'lightgreen').highlight_min(color = 'red')
+```
+
+* Conditional formatting for one column
+```python
+df.style.background(subset = ['measure'], cmap = 'viridis')
+```
+
 ## Series
+
+* Value counts as percentages
+```python
+df['measure'].value_counts(normalize = True)
+```
 
 ## Method Chaining
 
+```python
+```
+
+[Recommended Read - Effective Pandas](https://leanpub.com/effective-pandas)
+
 ## Aggregation
+
+* By month
+```python
+df.groupby([pd.Grouper(key = 'date', freq = 'M')])['measure'].agg(['sum', 'mean'])
+```
 
 ## New Columns
 
-* Based on one conditions - using `np.where()`
+* Based on one condition - using `np.where()`
 ```python
 np.where(df['gender'] == 'Male', 1, 0)
 ```
@@ -93,11 +140,24 @@ np.where(df['measure'] < 5, 'Low', np.where(df['measure'] < 10, 'Medium', 'High'
 conditions 
 ```
 
-* Based on multiple conditions - using `pd.Series.map()`
+* Based on manual mapping - using `pd.Series.map()`
 ```python
 values = {'Low': 1, 'Medium': 2, 'High': 3}
 
 df['dimension'].map(values)
+```
+
+* Automatically create dictionary from dimension values
+```python
+dimension_mappings = {v: k for k, v in enumerate(dimension.unique())}
+
+df['dimension'].map(dimension_mappings)
+```
+
+* Using list comprehensions
+```python
+# Grabbing domain name from email
+df['domain'] = [x.split('@')[1] for x in df['email']]
 ```
 
 ## Feature Engineering
@@ -108,20 +168,25 @@ df['dimension'].map(values)
 
 * Count occurence of dimension
 ```python
-df.groupby('dimension', as_index = False).transform(len)
+df.groupby('dimension').transform(len)
 
 # By another column
-df.groupby('dimension', as_index = False)['another_dimension'].transform(len)
+df.groupby('dimension')['another_dimension'].transform(len)
 ```
 
 * Count total of measure
 ```python
-df.groupby('dimension', as_index = False)['measure'].sum()
+df.groupby('dimension')['measure'].sum()
+```
+
+* Distinct list aggregation
+```python
+df[['customer_id', 'products']].drop_duplicates().groupby('customer_id')['products'].apply(list)
 ```
 
 * Aggregate statistics for numeric columns only
 ```python
-df.groupby('dimension', as_index = False).agg(['count', 'mean', 'max', 'min', 'sum'])
+df.groupby('dimension').agg(['count', 'mean', 'max', 'min', 'sum'])
 ```
 
 * Binning numerical value
@@ -131,13 +196,13 @@ pd.qcut(data['measure'], q = 4, labels = False)
 
 * Dummy variables
 ```python
-# Use `drop_first = True` to avoid multicollinearity
+# Use `drop_first = True` to avoid collinearity
 pd.get_dummies(df, drop_first = True)
 ```
 
 * Sort and take first value by some dimension
 ```python
-df.sort_values(by = "variable").groupby("dimension", as_index = False).first()
+df.sort_values(by = "variable").groupby("dimension").first()
 ```
 
 * RFM - Recency, Frequency & Monetary
