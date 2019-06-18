@@ -22,8 +22,8 @@ pd.set_option("display.max_columns", 500)
 # See more rows
 pd.set_option("display.max_rows", 500)
 
-# Round floats to 3 decimal places, in lieu of scientific notation
-pd.set_option("display.float_format", lambda x: "%.3f" % x)
+# Floating point output precision
+pd.set_option("display.precision", 3)
 
 # Increase column width
 pd.set_option('max_colwidth', 50)
@@ -60,11 +60,6 @@ df.columns = [x.lower() for x in df.columns]
 df.columns = df.columns.str.replace("[^\w\s]", "").str.replace(" ", "_").str.lower()
 ```
 
-* Correlation between all
-```python
-df.corr()
-```
-
 * Filtering DataFrame - using `pd.Series.isin()`
 ```python
 df[df['dimension'].isin(['A', 'B', 'C'])]
@@ -87,15 +82,19 @@ df.query('value < 10 | value.isnull()', engine='python')
 
 * Joining
 ```python
+# Inner join
+pd.merge(df1, df2, on = 'key')
+
+# Left join on different key names
+pd.merge(df1, df2, right_on = ['right_key'], left_on = ['left_key'], how = 'left')
 ```
 
-* Descriptive statistics numbers
+* Descriptive statistics
 ```python
+# Measures
 df.describe(include=[np.number]).T
-```
 
-* Descriptive statistics dimensions
-```python
+# Dimensions
 df.describe(include=[pd.Categorical]).T
 
 # Add percent frequency for top dimension
@@ -162,7 +161,7 @@ df["zipcode"].replace(".*[a-zA-Z].*", np.nan, regex=True)
 # WOM for week of month
 # Q for quarter end
 # A for year end
-df.groupby([pd.Grouper(key = 'date', freq = 'M')])['measure'].agg(['sum', 'mean'])
+df.groupby(['dimension', pd.Grouper(key = 'date', freq = 'M')])['measure'].agg(['sum', 'mean'])
 ```
 
 ## New Columns
@@ -254,7 +253,7 @@ pd.get_dummies(df, drop_first = True)
 
 * Sort and take first value by some dimension
 ```python
-df.sort_values(by = "variable").groupby("dimension").first()
+df.sort_values(by = 'variable').groupby('dimension').first()
 ```
 
 * RFM - Recency, Frequency & Monetary
