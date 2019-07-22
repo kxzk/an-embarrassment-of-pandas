@@ -205,6 +205,11 @@ df['dimension'].map(dimension_mappings)
 df['domain'] = [x.split('@')[1] for x in df['email']]
 ```
 
+* Spreading out one column into multiple columns
+```python
+df.pivot(index = 'date', columns = 'companies', values = 'sales')
+```
+
 ## Feature Engineering
 
 * Extracting various date components
