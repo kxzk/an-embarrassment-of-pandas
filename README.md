@@ -58,6 +58,9 @@ df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")]
 df.columns = [x.lower() for x in df.columns]
 
 df.columns = df.columns.str.replace("[^\w\s]", "").str.replace(" ", "_").str.lower()
+
+# Condense multiindex columns
+df.columns = ["_".join(col).lower() for col in df.columns]
 ```
 
 * Filtering DataFrame - using `pd.Series.isin()`
