@@ -205,7 +205,7 @@ df['dimension'].map(dimension_mappings)
 df['domain'] = [x.split('@')[1] for x in df['email']]
 ```
 
-* Spreading out one column into multiple columns
+* Spreading out one column into multiple columns - [visual example](https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html)
 ```python
 df.pivot(index = 'date', columns = 'companies', values = 'sales')
 ```
