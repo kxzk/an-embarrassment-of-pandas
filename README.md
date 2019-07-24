@@ -92,6 +92,11 @@ pd.merge(df1, df2, on = 'key')
 pd.merge(df1, df2, right_on = ['right_key'], left_on = ['left_key'], how = 'left')
 ```
 
+* Dropping columns
+```python
+df = df.drop(['column'], axis = 1)
+```
+
 * Descriptive statistics
 ```python
 # Measures
