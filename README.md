@@ -34,10 +34,12 @@ pd.set_option('max_colwidth', 50)
 pd.read_csv(
     'data.csv',
     skiprows = 2,
+    delimiter = ",",
+    quotechar = "|",
     usecols = [],
     dtype = [],
-    na_values = [],
-    parse_dates = [],
+    na_values = ["N/A", "?"],
+    parse_dates = ["return_date"],
     
 )
 ```
@@ -50,6 +52,23 @@ df = pd.concat([pd.read_csv(f) for f in glob.glob("*.csv")])
 
 # More `read_csv()` options
 df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")])
+```
+
+* Reading in data from SQLite3 database
+```python
+import sqlite3
+
+conn = sqlite3.connect("flights.db")
+df = pd.read_sql_query("select * from airlines", conn)
+```
+
+* Reading in data from Postgres
+```python
+from sqlalchemy import create_engine
+
+# 5439 for Redshift
+engine = create_engine("postgresql://user@localhost:5432/mydb")
+df = pd.read_sql_query("select * from airlines", engine)
 ```
 
 * Column headers
