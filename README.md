@@ -29,18 +29,19 @@ pd.set_option("display.precision", 3)
 pd.set_option('max_colwidth', 50)
 ```
 
-* Useful `read_csv()` options
+* Useful `read_csv()` options - [all options](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
 ```python
 pd.read_csv(
     'data.csv',
     skiprows = 2,
     delimiter = ",",
     quotechar = "|",
-    usecols = [],
-    dtype = [],
-    na_values = ["N/A", "?"],
+    usecols = ["return_date", "company", "sales"],
+    dtype = { "sales": np.float64 },
+    na_values = [".", "?"],
     parse_dates = ["return_date"],
-    
+    compression = "gzip",
+    encoding = "latin1" 
 )
 ```
 
@@ -60,6 +61,7 @@ import sqlite3
 
 conn = sqlite3.connect("flights.db")
 df = pd.read_sql_query("select * from airlines", conn)
+conn.close()
 ```
 
 * Reading in data from Postgres
