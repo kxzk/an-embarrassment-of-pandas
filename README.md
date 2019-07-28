@@ -1,6 +1,6 @@
 # An Embarrassment of Pandas
 
-![group-of-pandas](https://i.imgur.com/BJ1Zss2.png)
+![group-of-pandas](https://i.imgur.com/wPnWB5e.jpg)
 
 Why an embarrassment? Because it's the name for a [group of pandas!](https://www.reference.com/pets-animals/group-pandas-called-71cd65ea758ca2e2)
 
@@ -27,6 +27,10 @@ pd.set_option("display.precision", 3)
 
 # Increase column width
 pd.set_option('max_colwidth', 50)
+
+# Change default plotting backend - need Pandas >= 0.25
+# https://github.com/PatrikHlobil/Pandas-Bokeh
+pd.set_option('plotting.backend', 'pandas_bokeh')
 ```
 
 * Useful `read_csv()` options - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
@@ -148,6 +152,9 @@ df.query("column.isnull()", engine = "python")
 # @ - allows you to refer to variables in the environment
 names = ["john", "fred", "jack"]
 df.query("name in @names")
+
+# Reference columns with spaces using backticks - Pandas >= 0.25
+df.query("`Total Salary` > 100000")
 ```
 
 * Joining
@@ -334,6 +341,15 @@ df.groupby("dimension").agg({"sales": ["mean", "sum"], "sale_date": "first", "cu
 df.groupby("dimension").agg(['count', 'mean', 'max', 'min', 'sum'])
 ```
 
+* Named aggregations - Pandas >= 0.25
+```python
+df.groupby("country").agg(
+    min_height = pd.NamedAgg(column = "height", aggfunc = "min"),
+    max_height = pd.NamedAgg(column = "height", aggfunc = "max"),
+    average_weight = pd.NamedAgg(column = "weight", aggfunc = np.mean)
+)
+```
+
 ## New Columns
 
 * Based on one condition - using `np.where()`
@@ -348,7 +364,16 @@ np.where(df["measure"] < 5, "Low", np.where(df["measure"] < 10, "Medium", "High"
 
 * Based on multiple conditions - using `np.select()`
 ```python
-conditions 
+conditions = [
+    df["country"].str.contains("spain"),
+    df["country"].str.contains("italy"),
+    df["country"].str.contains("chile"),
+    df["country"].str.contains("brazil")
+]
+
+choices = ["europe", "europe", "south america", "south america"]
+
+data["continent"] = np.select(conditions, choices, default = "other")
 ```
 
 * Based on manual mapping - using `pd.Series.map()`
@@ -395,6 +420,11 @@ mean_salary = df.groupby("company")["salary"].agg("mean").rename("mean_salary").
 df_new = df.merge(mean_salary)
 ```
 
+* Encoding NaN's as outliers
+```python
+df["age"].fillna(df["age"].mean() + df["age"].std() * 3)
+```
+
 * Extracting various date components - [all options](https://i.imgur.com/if2Qosk.png)
 ```python
 df["date"].dt.year
@@ -419,12 +449,24 @@ df["first_date"].sub(df["second_date"]).div(np.timedelta64(1, "M"))
 (df["first_date] - df["second_date"]) / np.timedelta64(1, "M")
 ```
 
+* Weekend column
+```python
+df["is_weekend"] = np.where(df["date"].dt.dayofweek.isin([5, 6]), 1, 0)
+```
+
 * Days since prior date
 ```python
 df.sort_values(by = ["customer_id", "date"])\
     .groupby("customer_id")["date"]\
     .diff()\
     .div(np.timedelta64(1, "D"))
+```
+
+* Percent change since prior date
+```python
+df.sort_values(by = ["customer_id", "date"])\
+    .groupby("customer_id")["date"]\
+    .pct_change()
 ```
 
 * Distinct list aggregation
@@ -441,7 +483,11 @@ df.groupby("customer_id")["products"].value_counts().unstack().fillna(0)
 ```python
 pd.qcut(data["measure"], q = 4, labels = False)
 
+# Numeric
 pd.cut(df["measure"], bins = 4, labels = False)
+
+# Dimension
+pd.cut(df["age"], bins = [0, 18, 25, 99], labels = ["child", "young adult", "adult"])
 ```
 
 * Dummy variables
@@ -455,6 +501,16 @@ pd.get_dummies(df, drop_first = True)
 df.sort_values(by = "variable").groupby("dimension").first()
 ```
 
+* MinMax normalization
+```python
+df["salary_minmax"] = (df["salary"] - df["salary"].min()) / (df["salary"].max() - df["salary"].min())
+```
+
+* Z-score normalization
+```python
+df["salary_zscore"] = (df["salary"] - df["salary"].mean()) / df["salary"].std()
+```
+
 * Log transformation
 ```python
 # For positive data with no zeroes
@@ -462,6 +518,9 @@ np.log(df["sales"])
 
 # For positive data with zeroes
 np.log1p(df["sales"])
+
+# Convert back - get predictions if target is log transformed
+np.expm1(df["sales"])
 ```
 
 * Boxcox transformation
@@ -472,7 +531,30 @@ from scipy import stats
 stats.boxcox(df["sales"])[0]
 ```
 
-* Z-scores
+* Reciprocal transformation
+```python
+df["age_reciprocal"] = 1.0 / df["age"]
+```
+
+* Square root transformation
+```python
+df["age_sqrt"] = np.sqrt(df["age"])
+```
+
+* Winsorization
+```python
+upper_limit = np.percentile(df["salary"].values, 99)
+lower_limit = np.percentile(df["salary"].values, 1)
+
+df["salary"].clip(lower = lower_limit, upper = upper_limit)
+```
+
+* Mean encoding
+```python
+df.groupby("dimension")["target"].transform("mean")
+```
+
+* Z-scores for outliers
 ```python
 from scipy import stats
 import numpy as np
@@ -522,4 +604,16 @@ def haversine(s_lat, s_lng, e_lat, e_lng):
 
 # Convert pd.Series() -> np.ndarray()
 df['distance'] = haversine(df["start_lat"].values, df["start_long"].values, df["end_lat"].values, df["end_long"].values)
+```
+
+* Manhattan
+```python
+def manhattan(s_lat, s_lng, e_lat, e_lng):
+    """
+    sum of horizontal and vertical distance between
+    two points
+    """
+    a = haversine(s_lat, s_lng, s_lat, e_lng)
+    b = haversine(s_lat, s_lng, e_lat, s_lng)
+    return a + b
 ```
