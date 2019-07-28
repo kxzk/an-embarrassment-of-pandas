@@ -1,6 +1,6 @@
 # An Embarrassment of Pandas
 
-![group-of-pandas](https://www.gannett-cdn.com/-mm-/8ec5d09776cb16d4fc0180df562106e57760eb95/c=0-148-4253-2551/local/-/media/2018/04/03/USATODAY/USATODAY/636583772913864667-XXX-PANDAS-PDS-00508-98906967.JPG?width=3200&height=1680&fit=crop)
+![group-of-pandas](https://i.imgur.com/BJ1Zss2.png)
 
 Why an embarrassment? Because it's the name for a [group of pandas!](https://www.reference.com/pets-animals/group-pandas-called-71cd65ea758ca2e2)
 
@@ -14,7 +14,7 @@ Why an embarrassment? Because it's the name for a [group of pandas!](https://www
 
 ## DataFrames
 
-* Options
+* Options - [documentation](https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html)
 ```python
 # See more columns
 pd.set_option("display.max_columns", 500)
@@ -29,30 +29,52 @@ pd.set_option("display.precision", 3)
 pd.set_option('max_colwidth', 50)
 ```
 
-* Useful `read_csv()` options - [all options](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
+* Useful `read_csv()` options - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
 ```python
 pd.read_csv(
-    'data.csv',
+    'data.csv.gz',
+    delimiter = "^",
+    # line numbers to skip (i.e. headers in an excel report)
     skiprows = 2,
-    delimiter = ",",
+    # used to denote the start and end of a quoted item
     quotechar = "|",
+    # return a subset of columns
     usecols = ["return_date", "company", "sales"],
+    # data type for data or columns
     dtype = { "sales": np.float64 },
+    # additional strings to recognize as NA/NaN
     na_values = [".", "?"],
+    # convert to datetime, instead of object
     parse_dates = ["return_date"],
+    # for on-the-fly decompression of on-disk data
+    # options - gzip, bz2, zip, xz
     compression = "gzip",
-    encoding = "latin1" 
+    # encoding to use for reading
+    encoding = "latin1",
+    # read in a subset of data
+    nrows = 100
 )
 ```
 
-* Reading in multiple files at once
+* Reading in multiple files at once - [glob documentation](https://docs.python.org/3/library/glob.html)
 ```python
 import glob
 
-df = pd.concat([pd.read_csv(f) for f in glob.glob("*.csv")])
+# ignore_index = True to avoid duplicate index values
+df = pd.concat([pd.read_csv(f) for f in glob.glob("*.csv")], ignore_index = True)
 
 # More `read_csv()` options
-df = pd.concat([pd.read_csv(f, encoding = 'latin1') for f in glob.glob("*.csv")])
+df = pd.concat([pd.read_csv(f, encoding = "latin1") for f in glob.glob("*.csv")])
+```
+
+* Recursively grab all files in a directory
+```python
+import os
+import glob
+
+files = [os.path.join(root, file)
+        for root, dir, files in os.walk("./directory")
+        for file in glob.glob("*.csv")]
 ```
 
 * Reading in data from SQLite3 database
@@ -64,7 +86,7 @@ df = pd.read_sql_query("select * from airlines", conn)
 conn.close()
 ```
 
-* Reading in data from Postgres
+* Reading in data from Postgres - [BigQuery](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_gbq.html#pandas.read_gbq), [Snowflake](https://docs.snowflake.net/manuals/user-guide/sqlalchemy.html#snowflake-connector-for-python)
 ```python
 from sqlalchemy import create_engine
 
@@ -78,6 +100,7 @@ df = pd.read_sql_query("select * from airlines", engine)
 # Lower all values
 df.columns = [x.lower() for x in df.columns]
 
+# Strip out punctuation, replace spaces and lower
 df.columns = df.columns.str.replace("[^\w\s]", "").str.replace(" ", "_").str.lower()
 
 # Condense multiindex columns
@@ -86,36 +109,67 @@ df.columns = ["_".join(col).lower() for col in df.columns]
 
 * Filtering DataFrame - using `pd.Series.isin()`
 ```python
-df[df['dimension'].isin(['A', 'B', 'C'])]
+df[df["dimension"].isin(["A", "B", "C"])]
+
+# not in
+df[~df["dimension"].isin(["A", "B", "C"])]
 ```
 
 * Filtering DataFrame - using `pd.Series.str.contains()`
 ```python
-df[df['dimension'].str.contains('word')]
+df[df["dimension"].str.contains("word")]
+
+# not in
+df[~df["dimension"].str.contains("word")]
 ```
 
-* Filtering DataFrame - using `df.query()`
+* Filtering DataFrame - using `df.query()` - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html)
 ```python
-df.query('A > C')
+df.query("salary > 100000")
 
-df.query("A == 'C'")
+df.query("name == 'john'")
+
+df.query("name == 'john' | name == 'jack'")
+
+df.query("name == 'john' & salary > 100000")
+
+# Grab top 1% of earners
+df.query("salary > salary.quantile(.99)")
+
+# Make more than the mean
+df.query("salary > salary.mean()")
+
+# Subset by top 3 most frequent products purchased
+df.query("item in item.value_counts().nlargest(3).index")
 
 # Query for null values
-df.query('value < 10 | value.isnull()', engine='python')
+df.query("column.isnull()", engine = "python")
+
+# @ - allows you to refer to variables in the environment
+names = ["john", "fred", "jack"]
+df.query("name in @names")
 ```
 
 * Joining
 ```python
 # Inner join
-pd.merge(df1, df2, on = 'key')
+pd.merge(df1, df2, on = "key")
 
 # Left join on different key names
-pd.merge(df1, df2, right_on = ['right_key'], left_on = ['left_key'], how = 'left')
+pd.merge(df1, df2, right_on = ["right_key"], left_on = ["left_key"], how = "left")
 ```
 
-* Dropping columns
+* Select columns based on data type
 ```python
-df = df.drop(['column'], axis = 1)
+df.select_dtypes(include = "number")
+df.select_dtypes(exclude = "number")
+
+df.select_dtypes(include = ["object", "datetime"])
+```
+
+* Reverse column order
+```python
+df.loc[:, ::-1]
 ```
 
 * Descriptive statistics
@@ -132,19 +186,19 @@ df["freq_total"] = df["freq"].div(df["count"])
 
 * Styling with dollar signs, commas and percent signs
 ```python
-styling_options = {'sales': '${0:,.0f}', 'percent_of_sales': '{:.2%f}'}
+styling_options = {"sales": "${0:,.0f}", "percent_of_sales": "{:.2%f}"}
 
 df.style.format(styling_options)
 ```
 
 * Add highlighting for max and min values
 ```python
-df.style.highlight_max(color = 'lightgreen').highlight_min(color = 'red')
+df.style.highlight_max(color = "lightgreen").highlight_min(color = "red")
 ```
 
 * Conditional formatting for one column
 ```python
-df.style.background(subset = ['measure'], cmap = 'viridis')
+df.style.background(subset = ["measure"], cmap = "viridis")
 ```
 
 ## Series
@@ -152,14 +206,56 @@ df.style.background(subset = ['measure'], cmap = 'viridis')
 * Value counts as percentages
 ```python
 # Use `dropna = False` to see NaN values
-df['measure'].value_counts(normalize = True, dropna = False)
+df["meaure"].value_counts(normalize = True, dropna = False)
+```
+
+* Replacing errant characters
+```python
+df["sales"].str.replace("$", "")
 ```
 
 ## Missing Values
 
-* Replace null value with another column, else original column
+* Dropping columns
 ```python
-np.where(pd.isnull(df['dimension']), df['another_dimension'], df['dimension'])
+df.drop(["column_a", "column_b"], axis = 1)
+```
+
+* Dropping columns based on NaN threshold - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dropna.html)
+```python
+# Any column with 90% missing values will be dropped
+df.dropna(thresh = len(df) * .9, axis = 1)
+```
+
+* Replacing using `fillna()`
+```python
+# Impute DataFrame with all zeroes
+df.fillna(0)
+
+# Impute column with all zeroes
+df["measure"].fillna(0)
+
+# Impute measure with mean of column
+df["measure"].fillna(df["measure"].mean())
+
+# Impute dimension with mode of column
+df["dimension"].fillna(df["dimension"].mode())
+
+# Impute using a dimension's mean
+df["age"].fillna(df.groupby("sex")["age"].transform("mean"))
+```
+
+* Replace null value with another column / value, else original column
+```python
+np.where(pd.isnull(df["dimension"]), df["another_dimension"], df["dimension"])
+```
+
+* Replace errant characters with NaN
+```python
+df.replace(".", np.nan)
+
+# Can also convert 0s for easier cleaning
+df.replace(0, np.nan)
 ```
 
 * Replace numeric values containing a letter with null
@@ -167,20 +263,41 @@ np.where(pd.isnull(df['dimension']), df['another_dimension'], df['dimension'])
 df["zipcode"].replace(".*[a-zA-Z].*", np.nan, regex=True)
 ```
 
+* Drop rows where any value is 0
+```python
+df[(df != 0).all(1)]
+```
+
+* Drop rows where all values are 0
+```python
+df = df[(df.T != 0).any()]
+```
+
 ## Method Chaining
 
 ```python
-(pd.read_csv('data.csv')
-    .set_index('customer_id')
-    .rename(columns = {'SALES': 'sales'})
-    .assign()
-    .sort_values()
-    .head())
+(pd.read_csv('employee_salaries.csv')
+    .query("salary > 0")
+    .assign(sex = lambda df: df["sex"].replace({"female": 1, "male: 0}),
+            age = lambda df: pd.cut(df["age"].fillna(df["age"].median()),
+                                    bins = [df["age"].min(), 18, 40, df["age"].max()],
+                                    labels = ["underage", "young", "experienced"]))
+    .rename({"name_1": "first_name", "name_2": "last_name"})
+)
 ```
 
 [Recommended Read - Effective Pandas](https://leanpub.com/effective-pandas)
 
 ## Aggregation
+
+* Use `as_index = False` to avoid having to use `reset_index()` everytime
+```python
+# this
+df.groupby("dimension", as_index = False)["measure"].sum()
+
+# not this
+df.groupby("dimension")["measure"].sum().reset_index()
+```
 
 * By date offset - [full list of options](https://i.imgur.com/KHtdbpc.png)
 ```python
@@ -190,23 +307,43 @@ df["zipcode"].replace(".*[a-zA-Z].*", np.nan, regex=True)
 # WOM for week of month
 # Q for quarter end
 # A for year end
-df.groupby(['dimension', pd.Grouper(key = 'date', freq = 'M')])['measure'].agg(['sum', 'mean'])
+df.groupby(pd.Grouper(key = "date", freq = "M"))["measure"].agg(["sum", "mean"])
+```
+
+* Measure by dimension
+```python
+# count - number of non-null observations
+# sum - sum of values
+# mean - mean of values
+# mad - mean absolute deviation
+# median - arithmetic median of values
+# min - minimum
+# max - maxmimum
+# mode - mode
+# std - unbiased standard deviation
+# first - first value
+# last - last value
+df.groupby("dimension")["measure"].sum()
+
+# Specific aggregations by column
+df.groupby("dimension").agg({"sales": ["mean", "sum"], "sale_date": "first", "customer": "nunique"})
+```
+
+* Aggregate statistics for numeric columns across dimension values
+```python
+df.groupby("dimension").agg(['count', 'mean', 'max', 'min', 'sum'])
 ```
 
 ## New Columns
 
 * Based on one condition - using `np.where()`
 ```python
-np.where(df['gender'] == 'Male', 1, 0)
+np.where(df["gender"] == "Male", 1, 0)
 ```
 
 * Based on multiple conditions - using `np.where()`
 ```python
-np.where(df['measure'] < 5, 'Low', np.where(df['measure'] < 10, 'Medium', 'High'))
-```
-
-* Based on multiple conditions - using `pd.cut()`
-```python
+np.where(df["measure"] < 5, "Low", np.where(df["measure"] < 10, "Medium", "High"))
 ```
 
 * Based on multiple conditions - using `np.select()`
@@ -216,78 +353,128 @@ conditions
 
 * Based on manual mapping - using `pd.Series.map()`
 ```python
-values = {'Low': 1, 'Medium': 2, 'High': 3}
+values = {"Low": 1, "Medium": 2, "High": 3}
 
-df['dimension'].map(values)
+df["dimension"].map(values)
 ```
 
 * Automatically create dictionary from dimension values
 ```python
-dimension_mappings = {v: k for k, v in enumerate(dimension.unique())}
+dimension_mappings = {v: k for k, v in enumerate(df["dimension"].unique())}
 
-df['dimension'].map(dimension_mappings)
+df["dimension"].map(dimension_mappings)
 ```
 
 * Using list comprehensions
 ```python
 # Grabbing domain name from email
-df['domain'] = [x.split('@')[1] for x in df['email']]
+df["domain"] = [x.split("@")[1] for x in df["email"]]
 ```
 
-* Spreading out one column into multiple columns - [visual example](https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html)
+* Splitting a string column
 ```python
-df.pivot(index = 'date', columns = 'companies', values = 'sales')
+df["email"].str.split("@", expand = True)[0]
+```
+
+* Widening a column - [visual example](https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html)
+```python
+df.pivot(index = "date", columns = "companies", values = "sales")
 ```
 
 ## Feature Engineering
 
-* Extracting various date components
+* Stop using `inplace = True`, it's getting [deprecated](https://github.com/pandas-dev/pandas/issues/16529)
+
+* Screw split-apply-combine, `transform()` it
 ```python
+# this
+df["mean_company_salary"] = df.groupby("company")["salary"].transform("mean")
+
+# not this
+mean_salary = df.groupby("company")["salary"].agg("mean").rename("mean_salary").reset_index()
+df_new = df.merge(mean_salary)
+``
+
+* Extracting various date components - [all options](https://i.imgur.com/if2Qosk.png)
+```python
+df["date"].dt.year
+df["date"].dt.quarter
+df["date"].dt.month
+df["date"].dt.week
+df["date"].dt.day
+df["date"].dt.weekday
+df["date"].dt.weekday_name
+df["date"].dt.hour
 ```
 
-* Months between two dates
+* Time between two dates
 ```python
-# Y for years
-df['first_date'].sub(df['second_date']).div(np.timedelta64(1, 'M'))
-```
+# Days between
+df["first_date"].sub(df["second_date"]).div(np.timedelta64(1, "D"))
 
-* Count occurence of dimension
-```python
-df.groupby('dimension').transform(len)
+# Months between
+df["first_date"].sub(df["second_date"]).div(np.timedelta64(1, "M"))
 
-# By another column
-df.groupby('dimension')['another_dimension'].transform(len)
-```
-
-* Count total of measure
-```python
-df.groupby('dimension')['measure'].sum()
+# Equivalent to above
+(df["first_date] - df["second_date"]) / np.timedelta64(1, "M")
 ```
 
 * Distinct list aggregation
 ```python
-df[['customer_id', 'products']].drop_duplicates().groupby('customer_id')['products'].apply(list)
-```
-
-* Aggregate statistics for numeric columns only
-```python
-df.groupby('dimension').agg(['count', 'mean', 'max', 'min', 'sum'])
+df.groupby("customer_id").agg({"products": "unique"})
 ```
 
 * Binning numerical value
 ```python
-pd.qcut(data['measure'], q = 4, labels = False)
+pd.qcut(data["measure"], q = 4, labels = False)
+
+pd.cut(df["measure"], bins = 4, labels = False)
 ```
 
 * Dummy variables
 ```python
-# Use `drop_first = True` to avoid collinearity
+# Use `drop_first = True` to avoid multicollinearity
 pd.get_dummies(df, drop_first = True)
 ```
 
 * Sort and take first value by some dimension
 ```python
-df.sort_values(by = 'variable').groupby('dimension').first()
+df.sort_values(by = "variable").groupby("dimension").first()
+```
+
+* Log transformation
+```python
+# For positive data with no zeroes
+np.log(df["sales"])
+
+# For positive data with zeroes
+np.log1p(df["sales"])
+```
+
+* Boxcox transformation
+```python
+from scipy import stats
+
+# Must be positive
+stats.boxcox(df["sales"])[0]
+```
+
+* Z-scores
+```python
+from scipy import stats
+import numpy as np
+
+z = np.abs(stats.zscores(df))
+df = df[(z < 3).all(axis = 1)]
+```
+
+* Interquartile range (IQR)
+```python
+q1 = df["salary"].quantile(0.25)
+q3 = df["salary"].quantile(0.75)
+iqr = q3 - q1
+
+df.query("(@q1 - 1.5 * @iqr) <= salary <= (@q3 + 1.5 * @iqr)")
 ```
 
 * RFM - Recency, Frequency & Monetary
@@ -321,5 +508,5 @@ def haversine(s_lat, s_lng, e_lat, e_lng):
     return 2 * R * np.arcsin(np.sqrt(d))
 
 # Convert pd.Series() -> np.ndarray()
-df['distance'] = haversine(df['start_lat'].values, df['start_long'].values, df['end_lat'].values, df['end_long'].values)
+df['distance'] = haversine(df["start_lat"].values, df["start_long"].values, df["end_lat"].values, df["end_long"].values)
 ```
