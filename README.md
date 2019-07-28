@@ -393,7 +393,7 @@ df["mean_company_salary"] = df.groupby("company")["salary"].transform("mean")
 # not this
 mean_salary = df.groupby("company")["salary"].agg("mean").rename("mean_salary").reset_index()
 df_new = df.merge(mean_salary)
-``
+```
 
 * Extracting various date components - [all options](https://i.imgur.com/if2Qosk.png)
 ```python
@@ -419,9 +419,22 @@ df["first_date"].sub(df["second_date"]).div(np.timedelta64(1, "M"))
 (df["first_date] - df["second_date"]) / np.timedelta64(1, "M")
 ```
 
+* Days since prior date
+```python
+df.sort_values(by = ["customer_id", "date"])\
+    .groupby("customer_id")["date"]\
+    .diff()\
+    .div(np.timedelta64(1, "D"))
+```
+
 * Distinct list aggregation
 ```python
 df.groupby("customer_id").agg({"products": "unique"})
+```
+
+* User-item matrix
+```python
+df.groupby("customer_id")["products"].value_counts().unstack().fillna(0)
 ```
 
 * Binning numerical value
@@ -433,7 +446,7 @@ pd.cut(df["measure"], bins = 4, labels = False)
 
 * Dummy variables
 ```python
-# Use `drop_first = True` to avoid multicollinearity
+# Use `drop_first = True` to avoid collinearity
 pd.get_dummies(df, drop_first = True)
 ```
 
