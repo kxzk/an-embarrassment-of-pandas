@@ -147,7 +147,10 @@ df.query("salary > salary.mean()")
 df.query("item in item.value_counts().nlargest(3).index")
 
 # Query for null values
-df.query("column.isnull()", engine = "python")
+df.query("column.isnull()")
+
+# Query for non-nulls
+df.query("column.notnull()")
 
 # @ - allows you to refer to variables in the environment
 names = ["john", "fred", "jack"]
