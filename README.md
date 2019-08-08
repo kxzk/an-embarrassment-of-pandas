@@ -17,19 +17,19 @@ Why an embarrassment? Because it's the name for a [group of pandas!](https://www
 
 * Options - [documentation](https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html)
 ```python
-# See more columns
+# More columns
 pd.set_option("display.max_columns", 500)
 
-# See more rows
+# More rows
 pd.set_option("display.max_rows", 500)
 
-# Floating point output precision
+# Floating point precision
 pd.set_option("display.precision", 3)
 
 # Increase column width
 pd.set_option('max_colwidth', 50)
 
-# Change default plotting backend - need Pandas >= 0.25
+# Change default plotting backend - Pandas >= 0.25
 # https://github.com/PatrikHlobil/Pandas-Bokeh
 pd.set_option('plotting.backend', 'pandas_bokeh')
 ```
@@ -69,14 +69,14 @@ pd.read_csv("https://bit.ly/2KyxTFn")
 pd.read_csv("s3://pandas-test/tips.csv")
 ```
 
-* Reading in multiple files at once - [glob documentation](https://docs.python.org/3/library/glob.html)
+* Reading multiple files at once - [glob](https://docs.python.org/3/library/glob.html)
 ```python
 import glob
 
 # ignore_index = True to avoid duplicate index values
 df = pd.concat([pd.read_csv(f) for f in glob.glob("*.csv")], ignore_index = True)
 
-# More `read_csv()` options
+# More options
 df = pd.concat([pd.read_csv(f, encoding = "latin1") for f in glob.glob("*.csv")])
 ```
 
@@ -90,7 +90,7 @@ files = [os.path.join(root, file)
         for file in glob.glob("*.csv")]
 ```
 
-* Reading in data from SQLite3 database
+* Reading in data from SQLite3
 ```python
 import sqlite3
 
@@ -99,19 +99,26 @@ df = pd.read_sql_query("select * from airlines", conn)
 conn.close()
 ```
 
-* Reading in data from Postgres - [BigQuery](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_gbq.html#pandas.read_gbq), [Snowflake](https://docs.snowflake.net/manuals/user-guide/sqlalchemy.html#snowflake-connector-for-python)
+* Reading in data from Postgres - [bigquery](https://googleapis.github.io/google-cloud-python/latest/bigquery/index.html), [snowflake](https://docs.snowflake.net/manuals/user-guide/sqlalchemy.html#snowflake-connector-for-python)
 ```python
 from sqlalchemy import create_engine
 
-# 5439 for Redshift
+# Port 5439 for Redshift
 engine = create_engine("postgresql://user@localhost:5432/mydb")
 df = pd.read_sql_query("select * from airlines", engine)
 
-# Iterator of chunks
+# Get results in chunks
 for chunk in pd.read_sql_query("select * from airlines", engine, chunksize=5):
     print(chunk)
     
- df.to_sql('name_of_table', schema='schema', if_exists=['fail', 'replace', 'append'], chunksize = 10000)
+df.to_sql(
+    "table"
+    schema="schema"
+    # fail, replace or append
+    if_exists="append",
+    # write back in chunks
+    chunksize = 10000
+)
 ```
 
 * Normalizing nested JSON - [visual example](https://i.imgur.com/hr6j70j.png)
@@ -120,7 +127,7 @@ from pandas.io.json import json_normalize
 
 json_normalize(data, "counties", ["state", "shortname", ["info", "governor"]])
 
-# How deep to normalize
+# How deep to normalize - Pandas >= 0.25
 json_normalize(data, max_level=1)
 ```
 
@@ -155,7 +162,7 @@ df[df["dimension"].str.contains("word")]
 df[~df["dimension"].str.contains("word")]
 ```
 
-* Filtering DataFrame - using `df.query()` - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html)
+* Filtering DataFrame & more - using `df.query()` - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html)
 ```python
 df.query("salary > 100000")
 
@@ -164,6 +171,8 @@ df.query("name == 'john'")
 df.query("name == 'john' | name == 'jack'")
 
 df.query("name == 'john' and salary > 100000")
+
+df.query("name.str.contains('a')")
 
 # Grab top 1% of earners
 df.query("salary > salary.quantile(.99)")
@@ -200,7 +209,7 @@ pd.merge(df1, df2, right_on = ["right_key"], left_on = ["left_key"], how = "left
 * Select columns based on data type
 ```python
 df.select_dtypes(include = "number")
-df.select_dtypes(exclude = "number")
+df.select_dtypes(exclude = "object")
 ```
 
 * Reverse column order
@@ -218,17 +227,15 @@ df.corrwith(df_2)
 
 * Descriptive statistics
 ```python
-# Measures
 df.describe(include=[np.number]).T
 
-# Dimensions
-df.describe(include=[pd.Categorical]).T
+dims = df.describe(include=[pd.Categorical]).T
 
 # Add percent frequency for top dimension
-df["freq_total"] = df["freq"].div(df["count"])
+dims["freq_total"] = dims["freq"].div(dims["count"])
 ```
 
-* Styling with dollar signs, commas and percent signs
+* Styling numeric columns - [documentation](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
 ```python
 styling_options = {"sales": "${0:,.0f}", "percent_of_sales": "{:.2%f}"}
 
@@ -249,7 +256,7 @@ df.style.background(subset = ["measure"], cmap = "viridis")
 
 * Value counts as percentages
 ```python
-# Use `dropna = False` to see NaN values
+# See NaNs as well
 df["meaure"].value_counts(normalize = True, dropna = False)
 ```
 
@@ -258,16 +265,26 @@ df["meaure"].value_counts(normalize = True, dropna = False)
 df["sales"].str.replace("$", "")
 ```
 
-* Replacing false conditions
+* Replacing false conditions - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.where.html)
 ```python
 df["steps_walked"].where(df["steps_walked"] > 0, 0)
 ```
 
 ## Missing Values
 
-* Dropping columns
+* Percent nulls by column
+```python
+(df.isnull().sum() / df.isnull().count()).sort_values(ascending=False)
+```
+
+* Dropping columns - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.drop.html)
 ```python
 df.drop(["column_a", "column_b"], axis = 1)
+```
+
+* Dropping rows - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.drop_duplicates.html#pandas.DataFrame.drop_duplicates)
+```python
+df.drop_duplicates(subset=["order_date", "product"], keep="first")
 ```
 
 * Dropping columns based on NaN threshold - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.dropna.html)
@@ -276,7 +293,7 @@ df.drop(["column_a", "column_b"], axis = 1)
 df.dropna(thresh = len(df) * .9, axis = 1)
 ```
 
-* Replacing using `fillna()`
+* Replacing using `df.fillna()` - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.fillna.html)
 ```python
 # Impute DataFrame with all zeroes
 df.fillna(0)
@@ -290,34 +307,28 @@ df["measure"].fillna(df["measure"].mean())
 # Impute dimension with mode of column
 df["dimension"].fillna(df["dimension"].mode())
 
-# Impute using a dimension's mean
+# Impute by another dimension's mean
 df["age"].fillna(df.groupby("sex")["age"].transform("mean"))
 ```
 
-* Replace null value with another column / value, else original column
-```python
-np.where(pd.isnull(df["dimension"]), df["another_dimension"], df["dimension"])
-```
-
-* Replace errant characters with NaN
+* Replace missing values across entire DataFrame
 ```python
 df.replace(".", np.nan)
 
-# Can also convert 0s for easier cleaning
 df.replace(0, np.nan)
 ```
 
-* Replace numeric values containing a letter with null
+* Replace numeric values containing a letter with NaN
 ```python
 df["zipcode"].replace(".*[a-zA-Z].*", np.nan, regex=True)
 ```
 
-* Drop rows where any value is 0
+* Drop rows where **any** value is 0
 ```python
 df[(df != 0).all(1)]
 ```
 
-* Drop rows where all values are 0
+* Drop rows where **all** values are 0
 ```python
 df = df[(df.T != 0).any()]
 ```
@@ -341,7 +352,7 @@ def fix_headers(df):
     df.columns = df.columns.str.replace("[^\w\s]", "").str.replace(" ", "_").str.lower()
     return df
     
-def drop_rows_missing(df, percent):
+def drop_columns_missing(df, percent):
     df = df.dropna(thresh = len(df) * percent, axis = 1)
     return df
 
@@ -349,10 +360,15 @@ def fill_missing(df, value):
     df = df.fillna(value)
     return df
 
+def replace_and_convert(df, col, orig, new, dtype):
+    df[col] = df[col].str.replace(orig, new).astype(dtype)
+    return df
+
 
 (df.pipe(fix_headers)
-    .pipe(drop_rows_missing, percent=0.3)
+    .pipe(drop_columns_missing, percent=0.3)
     .pipe(fill_missing, value=0)
+    .pipe(replace_and_convert, col="sales", orig="$", new="", dtype=float)
 )
 ```
 
@@ -360,7 +376,7 @@ def fill_missing(df, value):
 
 ## Aggregation
 
-* Use `as_index = False` to avoid having to use `reset_index()` everytime
+* Use `as_index = False` to avoid `reset_index()` if index isn't desired
 ```python
 # this
 df.groupby("dimension", as_index = False)["measure"].sum()
@@ -369,7 +385,7 @@ df.groupby("dimension", as_index = False)["measure"].sum()
 df.groupby("dimension")["measure"].sum().reset_index()
 ```
 
-* By date offset - [full list of options](https://i.imgur.com/KHtdbpc.png)
+* By date offset - [documentation](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects)
 ```python
 # H for hours
 # D for days
@@ -380,7 +396,7 @@ df.groupby("dimension")["measure"].sum().reset_index()
 df.groupby(pd.Grouper(key = "date", freq = "M"))["measure"].agg(["sum", "mean"])
 ```
 
-* Measure by dimension
+* Measure by dimension - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/groupby.html)
 ```python
 # count - number of non-null observations
 # sum - sum of values
@@ -393,15 +409,11 @@ df.groupby(pd.Grouper(key = "date", freq = "M"))["measure"].agg(["sum", "mean"])
 # std - unbiased standard deviation
 # first - first value
 # last - last value
+# nunique - unique values
 df.groupby("dimension")["measure"].sum()
 
-# Specific aggregations by column
+# Specific aggregations for columns
 df.groupby("dimension").agg({"sales": ["mean", "sum"], "sale_date": "first", "customer": "nunique"})
-```
-
-* Aggregate statistics for numeric columns across dimension values
-```python
-df.groupby("dimension").agg(['count', 'mean', 'max', 'min', 'sum'])
 ```
 
 * Pivot table - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.pivot_table.html#pandas.pivot_table)
@@ -417,16 +429,16 @@ pd.pivot_table(
 )
 ```
 
-* Named aggregations - `Pandas >= 0.25`
+* Named aggregations - `Pandas >= 0.25` - [documentation](https://pandas.pydata.org/pandas-docs/stable/whatsnew/v0.25.0.html#groupby-aggregation-with-relabeling)
 ```python
-# Version 1
+# DataFrame - Version 1
 df.groupby("country").agg(
     min_height = pd.NamedAgg(column = "height", aggfunc = "min"),
     max_height = pd.NamedAgg(column = "height", aggfunc = "max"),
     average_weight = pd.NamedAgg(column = "weight", aggfunc = np.mean)
 )
 
-# Version 2
+# DataFrame - Version 2
 df.groupby("country").agg(
     min_height=("height", "min"),
     max_heights=("height", "max"),
@@ -489,16 +501,20 @@ values = {"Low": 1, "Medium": 2, "High": 3}
 df["dimension"].map(values)
 ```
 
-* Automatically create dictionary from dimension values
+* Automatically generate mappings from dimension
 ```python
 dimension_mappings = {v: k for k, v in enumerate(df["dimension"].unique())}
 
 df["dimension"].map(dimension_mappings)
 ```
 
+* Splitting a string column
+```python
+df["email"].str.split("@", expand = True)[0]
+```
+
 * Using list comprehensions
 ```python
-# Grabbing domain name from email
 df["domain"] = [x.split("@")[1] for x in df["email"]]
 ```
 
@@ -513,11 +529,6 @@ pattern = "(?P<email>[A-Z0-9._%+-]+)@(?P<domain>[A-Z0-9.-]+)"
 
 # Generates two columns
 email_components = df["email"].str.extract(pattern, flags=re.IGNORECASE)
-```
-
-* Splitting a string column
-```python
-df["email"].str.split("@", expand = True)[0]
 ```
 
 * Widening a column - [visual example](https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html)
@@ -539,12 +550,12 @@ mean_salary = df.groupby("company")["salary"].agg("mean").rename("mean_salary").
 df_new = df.merge(mean_salary)
 ```
 
-* Encoding NaN's as outliers
+* Encoding NaNs as outliers
 ```python
 df["age"].fillna(df["age"].mean() + df["age"].std() * 3)
 ```
 
-* Extracting various date components - [all options](https://i.imgur.com/if2Qosk.png)
+* Extracting various date components - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/series.html#datetime-properties)
 ```python
 df["date"].dt.year
 df["date"].dt.quarter
@@ -575,21 +586,22 @@ df["is_weekend"] = np.where(df["date"].dt.dayofweek.isin([5, 6]), 1, 0)
 
 * Get prior date
 ```python
-df["order_date"].shift(periods=1)
+df.sort_values(by=["customer_id, "order_date"])\
+    .groupby("customer_id")["order_date"].shift(periods=1)
 ```
 
 * Days since prior date
 ```python
-df.sort_values(by = ["customer_id", "date"])\
-    .groupby("customer_id")["date"]\
+df.sort_values(by = ["customer_id", "order_date"])\
+    .groupby("customer_id")["order_date"]\
     .diff()\
     .div(np.timedelta64(1, "D"))
 ```
 
 * Percent change since prior date
 ```python
-df.sort_values(by = ["customer_id", "date"])\
-    .groupby("customer_id")["date"]\
+df.sort_values(by = ["customer_id", "order_date"])\
+    .groupby("customer_id")["order_date"]\
     .pct_change()
 ```
 
@@ -609,7 +621,7 @@ df["review"].str.count("great", flags=re.IGNORECASE)
 ```python
 df["unique_products"] = df.groupby("customer_id").agg({"products": "unique"})
 
-# Transform each element -> row
+# Transform each element -> row - Pandas >= 0.25
 df["unique_products"].explode()
 ```
 
@@ -618,7 +630,7 @@ df["unique_products"].explode()
 df.groupby("customer_id")["products"].value_counts().unstack().fillna(0)
 ```
 
-* Binning numerical value
+* Binning
 ```python
 pd.qcut(data["measure"], q = 4, labels = False)
 
@@ -631,11 +643,11 @@ pd.cut(df["age"], bins = [0, 18, 25, 99], labels = ["child", "young adult", "adu
 
 * Dummy variables
 ```python
-# Use `drop_first = True` to avoid collinearity
+# Use drop_first = True to avoid collinearity
 pd.get_dummies(df, drop_first = True)
 ```
 
-* Sort and take first value by some dimension
+* Sort and take first value by dimension
 ```python
 df.sort_values(by = "variable").groupby("dimension").first()
 ```
@@ -709,6 +721,14 @@ q3 = df["salary"].quantile(0.75)
 iqr = q3 - q1
 
 df.query("(@q1 - 1.5 * @iqr) <= salary <= (@q3 + 1.5 * @iqr)")
+```
+
+* Geocoder - [github](https://github.com/DenisCarriere/geocoder)
+* Geopy - [github](https://github.com/geopy/geopy)
+```python
+import geocoder
+
+df["lat_long"] = df["ip"].apply(lambda x: geocoder.ip(x).latlng)
 ```
 
 * RFM - Recency, Frequency & Monetary [input](https://gist.github.com/kadekillary/7d766354c39b39558e4b5efc69a29f06), [output](https://gist.github.com/kadekillary/901b7f647d06fe296bdd2677c0760ccb)
@@ -831,12 +851,20 @@ food_2 = pd.Categorical(["burger king", "chipotle"])
 union_categoricals([food, food_2])
 ```
 
-* Testing
+* Testing - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/general_utility_functions.html#testing-functions)
 ```python
 from pandas.util.testing import assert_frame_equal
 
 # Methods for Series and Index as well
 assert_frame_equal(df_1, df_2)
+```
+
+* Dtype checking - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/general_utility_functions.html#dtype-introspection)
+```python
+from pandas.api.types import is_numeric_dtype
+
+is_numeric_dtype("hello world")
+# False
 ```
 
 * Infer column dtype, useful to remap column dtypes [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.types.infer_dtype.html#pandas.api.types.infer_dtype)
