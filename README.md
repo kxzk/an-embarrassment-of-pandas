@@ -27,11 +27,11 @@ pd.set_option("display.max_rows", 500)
 pd.set_option("display.precision", 3)
 
 # Increase column width
-pd.set_option('max_colwidth', 50)
+pd.set_option("max_colwidth", 50)
 
 # Change default plotting backend - Pandas >= 0.25
 # https://github.com/PatrikHlobil/Pandas-Bokeh
-pd.set_option('plotting.backend', 'pandas_bokeh')
+pd.set_option("plotting.backend", 'pandas_bokeh')
 ```
 
 * Useful `read_csv()` options - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
@@ -61,7 +61,7 @@ pd.read_csv(
 )
 ```
 
-* Read URLs to CSV file - [s3fs](https://github.com/dask/s3fs/)
+* Read csv from URL or S3 - [s3fs](https://github.com/dask/s3fs/)
 ```python
 pd.read_csv("https://bit.ly/2KyxTFn")
 
@@ -69,7 +69,17 @@ pd.read_csv("https://bit.ly/2KyxTFn")
 pd.read_csv("s3://pandas-test/tips.csv")
 ```
 
-* Reading multiple files at once - [glob](https://docs.python.org/3/library/glob.html)
+* Read an Excel file - [documentation](https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#excel-files)
+```python
+pd.read_excel("numbers.xlsx", sheet_name="Sheet1")
+
+# Multiple sheets with varying parameters
+with pd.ExcelFile("numbers.xlsx") as xlsx:
+    df1 = pd.read_excel(xlsx, "Sheet1", na_values=["?"])
+    df2 = pd.read_excel(xlsx, "Sheet2", na_values=[".", "Missing"])
+```
+
+* Read multiple files at once - [glob](https://docs.python.org/3/library/glob.html)
 ```python
 import glob
 
@@ -90,7 +100,7 @@ files = [os.path.join(root, file)
         for file in glob.glob("*.csv")]
 ```
 
-* Reading in data from SQLite3
+* Read in data from SQLite3
 ```python
 import sqlite3
 
@@ -99,7 +109,7 @@ df = pd.read_sql_query("select * from airlines", conn)
 conn.close()
 ```
 
-* Reading in data from Postgres - [bigquery](https://googleapis.github.io/google-cloud-python/latest/bigquery/index.html), [snowflake](https://docs.snowflake.net/manuals/user-guide/sqlalchemy.html#snowflake-connector-for-python)
+* Read in data from Postgres - [bigquery](https://googleapis.github.io/google-cloud-python/latest/bigquery/index.html), [snowflake](https://docs.snowflake.net/manuals/user-guide/sqlalchemy.html#snowflake-connector-for-python)
 ```python
 from sqlalchemy import create_engine
 
@@ -110,7 +120,8 @@ df = pd.read_sql_query("select * from airlines", engine)
 # Get results in chunks
 for chunk in pd.read_sql_query("select * from airlines", engine, chunksize=5):
     print(chunk)
-    
+
+# Writing back
 df.to_sql(
     "table"
     schema="schema"
@@ -121,7 +132,7 @@ df.to_sql(
 )
 ```
 
-* Normalizing nested JSON - [visual example](https://i.imgur.com/hr6j70j.png)
+* Normalizing nested JSON - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.io.json.json_normalize.html)
 ```python
 from pandas.io.json import json_normalize
 
@@ -232,7 +243,7 @@ df.describe(include=[np.number]).T
 dims = df.describe(include=[pd.Categorical]).T
 
 # Add percent frequency for top dimension
-dims["freq_total"] = dims["freq"].div(dims["count"])
+dims["frequency"] = dims["freq"].div(dims["count"])
 ```
 
 * Styling numeric columns - [documentation](https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html)
@@ -311,7 +322,7 @@ df["dimension"].fillna(df["dimension"].mode())
 df["age"].fillna(df.groupby("sex")["age"].transform("mean"))
 ```
 
-* Replace missing values across entire DataFrame
+* Replace values across entire DataFrame
 ```python
 df.replace(".", np.nan)
 
@@ -531,16 +542,14 @@ pattern = "(?P<email>[A-Z0-9._%+-]+)@(?P<domain>[A-Z0-9.-]+)"
 email_components = df["email"].str.extract(pattern, flags=re.IGNORECASE)
 ```
 
-* Widening a column - [visual example](https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html)
+* Widening a column - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.pivot.html)
 ```python
 df.pivot(index = "date", columns = "companies", values = "sales")
 ```
 
 ## Feature Engineering
 
-* Stop using `inplace = True`, it's getting [deprecated](https://github.com/pandas-dev/pandas/issues/16529)
-
-* Instead of split-apply-combine, `transform()` it
+* Instead of split-apply-combine, `transform()`
 ```python
 # this
 df["mean_company_salary"] = df.groupby("company")["salary"].transform("mean")
@@ -548,11 +557,6 @@ df["mean_company_salary"] = df.groupby("company")["salary"].transform("mean")
 # versus this
 mean_salary = df.groupby("company")["salary"].agg("mean").rename("mean_salary").reset_index()
 df_new = df.merge(mean_salary)
-```
-
-* Encoding NaNs as outliers
-```python
-df["age"].fillna(df["age"].mean() + df["age"].std() * 3)
 ```
 
 * Extracting various date components - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/series.html#datetime-properties)
@@ -731,7 +735,7 @@ import geocoder
 df["lat_long"] = df["ip"].apply(lambda x: geocoder.ip(x).latlng)
 ```
 
-* RFM - Recency, Frequency & Monetary [input](https://gist.github.com/kadekillary/7d766354c39b39558e4b5efc69a29f06), [output](https://gist.github.com/kadekillary/901b7f647d06fe296bdd2677c0760ccb)
+* RFM - Recency, Frequency and Monetary
 ```python
 rfm = (
     df.groupby("customer_id")
@@ -739,7 +743,7 @@ rfm = (
         {
             "order_date": lambda x: (x.max() - x.min()).days,
             "order_id": "nunique",
-            "price": "sum",
+            "price": "mean",
         }
     )
     .rename(
