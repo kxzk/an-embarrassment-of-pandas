@@ -11,6 +11,7 @@ Why an embarrassment? Because it's the name for a [group of pandas!](https://www
 * [Aggregation](#aggregation)
 * [New Columns](#new-columns)
 * [Feature Engineering](#feature-engineering)
+* [Random](#random)
 
 ## DataFrames
 
@@ -36,7 +37,7 @@ pd.set_option('plotting.backend', 'pandas_bokeh')
 * Useful `read_csv()` options - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html)
 ```python
 pd.read_csv(
-    'data.csv.gz',
+    "data.csv.gz",
     delimiter = "^",
     # line numbers to skip (i.e. headers in an excel report)
     skiprows = 2,
@@ -58,6 +59,14 @@ pd.read_csv(
     # read in a subset of data
     nrows = 100
 )
+```
+
+* Read URLs to CSV file - [s3fs](https://github.com/dask/s3fs/)
+```python
+pd.read_csv("https://bit.ly/2KyxTFn")
+
+# Requires s3fs library
+pd.read_csv("s3://pandas-test/tips.csv")
 ```
 
 * Reading in multiple files at once - [glob documentation](https://docs.python.org/3/library/glob.html)
@@ -97,6 +106,22 @@ from sqlalchemy import create_engine
 # 5439 for Redshift
 engine = create_engine("postgresql://user@localhost:5432/mydb")
 df = pd.read_sql_query("select * from airlines", engine)
+
+# Iterator of chunks
+for chunk in pd.read_sql_query("select * from airlines", engine, chunksize=5):
+    print(chunk)
+    
+ df.to_sql('name_of_table', schema='schema', if_exists=['fail', 'replace', 'append'], chunksize = 10000)
+```
+
+* Normalizing nested JSON - [visual example](https://i.imgur.com/hr6j70j.png)
+```python
+from pandas.io.json import json_normalize
+
+json_normalize(data, "counties", ["state", "shortname", ["info", "governor"]])
+
+# How deep to normalize
+json_normalize(data, max_level=1)
 ```
 
 * Column headers
@@ -109,6 +134,9 @@ df.columns = df.columns.str.replace("[^\w\s]", "").str.replace(" ", "_").str.low
 
 # Condense multiindex columns
 df.columns = ["_".join(col).lower() for col in df.columns]
+
+# Double transpose to remove bottom row for multiindex columns
+df.T.reset_index(1, drop=True).T
 ```
 
 * Filtering DataFrame - using `pd.Series.isin()`
@@ -135,7 +163,7 @@ df.query("name == 'john'")
 
 df.query("name == 'john' | name == 'jack'")
 
-df.query("name == 'john' & salary > 100000")
+df.query("name == 'john' and salary > 100000")
 
 # Grab top 1% of earners
 df.query("salary > salary.quantile(.99)")
@@ -160,7 +188,7 @@ df.query("name in @names")
 df.query("`Total Salary` > 100000")
 ```
 
-* Joining
+* Joining - [documentation](https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html)
 ```python
 # Inner join
 pd.merge(df1, df2, on = "key")
@@ -173,13 +201,19 @@ pd.merge(df1, df2, right_on = ["right_key"], left_on = ["left_key"], how = "left
 ```python
 df.select_dtypes(include = "number")
 df.select_dtypes(exclude = "number")
-
-df.select_dtypes(include = ["object", "datetime"])
 ```
 
 * Reverse column order
 ```python
 df.loc[:, ::-1]
+```
+
+* Correlation matrix
+```python
+df.corr()
+
+# With another DataFrame
+df.corrwith(df_2)
 ```
 
 * Descriptive statistics
@@ -222,6 +256,11 @@ df["meaure"].value_counts(normalize = True, dropna = False)
 * Replacing errant characters
 ```python
 df["sales"].str.replace("$", "")
+```
+
+* Replacing false conditions
+```python
+df["steps_walked"].where(df["steps_walked"] > 0, 0)
 ```
 
 ## Missing Values
@@ -296,6 +335,27 @@ df = df[(df.T != 0).any()]
 )
 ```
 
+* Pipelines for data processing
+```python
+def fix_headers(df):
+    df.columns = df.columns.str.replace("[^\w\s]", "").str.replace(" ", "_").str.lower()
+    return df
+    
+def drop_rows_missing(df, percent):
+    df = df.dropna(thresh = len(df) * percent, axis = 1)
+    return df
+
+def fill_missing(df, value):
+    df = df.fillna(value)
+    return df
+
+
+(df.pipe(fix_headers)
+    .pipe(drop_rows_missing, percent=0.3)
+    .pipe(fill_missing, value=0)
+)
+```
+
 [Recommended Read - Effective Pandas](https://leanpub.com/effective-pandas)
 
 ## Aggregation
@@ -305,7 +365,7 @@ df = df[(df.T != 0).any()]
 # this
 df.groupby("dimension", as_index = False)["measure"].sum()
 
-# not this
+# versus this
 df.groupby("dimension")["measure"].sum().reset_index()
 ```
 
@@ -344,16 +404,59 @@ df.groupby("dimension").agg({"sales": ["mean", "sum"], "sale_date": "first", "cu
 df.groupby("dimension").agg(['count', 'mean', 'max', 'min', 'sum'])
 ```
 
-* Named aggregations - Pandas >= 0.25
+* Pivot table - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.pivot_table.html#pandas.pivot_table)
 ```python
+pd.pivot_table(
+    df,
+    values=["sales", "orders"],
+    index=["customer_id"],
+    aggfunc={
+        "sales": ["sum", "mean"],
+        "orders": "nunique"
+    }
+)
+```
+
+* Named aggregations - `Pandas >= 0.25`
+```python
+# Version 1
 df.groupby("country").agg(
     min_height = pd.NamedAgg(column = "height", aggfunc = "min"),
     max_height = pd.NamedAgg(column = "height", aggfunc = "max"),
     average_weight = pd.NamedAgg(column = "weight", aggfunc = np.mean)
 )
+
+# Version 2
+df.groupby("country").agg(
+    min_height=("height", "min"),
+    max_heights=("height", "max"),
+    average_weight=("weight", np.mean)
+)
+
+# Series
+df.groupby("gender").height.agg(
+    min_height="min",
+    max_height="max"
+)
 ```
 
 ## New Columns
+
+* Using `df.eval()`
+```python
+df["sales"] = df.eval("price * quantity")
+
+# Assign to different DataFrame
+pd.eval("sales = df.price * df.quantity", target=df_2)
+
+# Multiline assignment
+df.eval("""
+aov = price / quantity
+aov_gt_50 = (price / quantity) > 50
+top_3_customers = customer_id in customer_id.value_counts().nlargest(3).index
+bottom_3_customers = customer_id in customer_id.value_counts().nsmallest(3).index
+""")
+```
 
 * Based on one condition - using `np.where()`
 ```python
@@ -399,6 +502,19 @@ df["dimension"].map(dimension_mappings)
 df["domain"] = [x.split("@")[1] for x in df["email"]]
 ```
 
+* Using regular expressions
+```python
+import re
+
+pattern = "([A-Z0-9._%+-]+)@([A-Z0-9.-]+)"
+
+# Inserting colum headers, applied after extract
+pattern = "(?P<email>[A-Z0-9._%+-]+)@(?P<domain>[A-Z0-9.-]+)"
+
+# Generates two columns
+email_components = df["email"].str.extract(pattern, flags=re.IGNORECASE)
+```
+
 * Splitting a string column
 ```python
 df["email"].str.split("@", expand = True)[0]
@@ -413,12 +529,12 @@ df.pivot(index = "date", columns = "companies", values = "sales")
 
 * Stop using `inplace = True`, it's getting [deprecated](https://github.com/pandas-dev/pandas/issues/16529)
 
-* Screw split-apply-combine, `transform()` it
+* Instead of split-apply-combine, `transform()` it
 ```python
 # this
 df["mean_company_salary"] = df.groupby("company")["salary"].transform("mean")
 
-# not this
+# versus this
 mean_salary = df.groupby("company")["salary"].agg("mean").rename("mean_salary").reset_index()
 df_new = df.merge(mean_salary)
 ```
@@ -457,6 +573,11 @@ df["first_date"].sub(df["second_date"]).div(np.timedelta64(1, "M"))
 df["is_weekend"] = np.where(df["date"].dt.dayofweek.isin([5, 6]), 1, 0)
 ```
 
+* Get prior date
+```python
+df["order_date"].shift(periods=1)
+```
+
 * Days since prior date
 ```python
 df.sort_values(by = ["customer_id", "date"])\
@@ -472,9 +593,24 @@ df.sort_values(by = ["customer_id", "date"])\
     .pct_change()
 ```
 
+* Percentile rank for measure
+```python
+df["salary"].rank(pct=True)
+```
+
+* Occurences of word in row
+```python
+import re
+
+df["review"].str.count("great", flags=re.IGNORECASE)
+```
+
 * Distinct list aggregation
 ```python
-df.groupby("customer_id").agg({"products": "unique"})
+df["unique_products"] = df.groupby("customer_id").agg({"products": "unique"})
+
+# Transform each element -> row
+df["unique_products"].explode()
 ```
 
 * User-item matrix
@@ -575,8 +711,70 @@ iqr = q3 - q1
 df.query("(@q1 - 1.5 * @iqr) <= salary <= (@q3 + 1.5 * @iqr)")
 ```
 
-* RFM - Recency, Frequency & Monetary
+* RFM - Recency, Frequency & Monetary [input](https://gist.github.com/kadekillary/7d766354c39b39558e4b5efc69a29f06), [output](https://gist.github.com/kadekillary/901b7f647d06fe296bdd2677c0760ccb)
 ```python
+rfm = (
+    df.groupby("customer_id")
+    .agg(
+        {
+            "order_date": lambda x: (x.max() - x.min()).days,
+            "order_id": "nunique",
+            "price": "sum",
+        }
+    )
+    .rename(
+        columns={"order_date": "recency", "order_id": "frequency", "price": "monetary"}
+    )
+)
+
+rfm_quantiles = rfm.quantile(q=[0.2, 0.4, 0.6, 0.8])
+
+recency_conditions = [
+    rfm.recency >= rfm_quantiles.recency.iloc[3],
+    rfm.recency >= rfm_quantiles.recency.iloc[2],
+    rfm.recency >= rfm_quantiles.recency.iloc[1],
+    rfm.recency >= rfm_quantiles.recency.iloc[0],
+    rfm.recency <= rfm_quantiles.recency.iloc[0],
+]
+
+frequency_conditions = [
+    rfm.frequency <= rfm_quantiles.frequency.iloc[0],
+    rfm.frequency <= rfm_quantiles.frequency.iloc[1],
+    rfm.frequency <= rfm_quantiles.frequency.iloc[2],
+    rfm.frequency <= rfm_quantiles.frequency.iloc[3],
+    rfm.frequency >= rfm_quantiles.frequency.iloc[3],
+]
+
+monetary_conditions = [
+    rfm.monetary <= rfm_quantiles.monetary.iloc[0],
+    rfm.monetary <= rfm_quantiles.monetary.iloc[1],
+    rfm.monetary <= rfm_quantiles.monetary.iloc[2],
+    rfm.monetary <= rfm_quantiles.monetary.iloc[3],
+    rfm.monetary >= rfm_quantiles.monetary.iloc[3],
+]
+
+ranks = [1, 2, 3, 4, 5]
+
+rfm["r"] = np.select(recency_conditions, ranks, "other")
+rfm["f"] = np.select(frequency_conditions, ranks, "other")
+rfm["m"] = np.select(monetary_conditions, ranks, "other")
+
+rfm["segment"] = rfm["r"].astype(str).add(rfm["f"].astype(str))
+
+segment_map = {
+    r"[1-2][1-2]": "hibernating",
+    r"[1-2][3-4]": "at risk",
+    r"[1-2]5": "cannot lose",
+    r"3[1-2]": "about to sleep",
+    r"33": "need attention",
+    r"[3-4][4-5]": "loyal customers",
+    r"41": "promising",
+    r"51": "new customers",
+    r"[4-5][2-3]": "potential loyalists",
+    r"5[4-5]": "champions",
+}
+
+rfm["segment"] = rfm.segment.replace(segment_map, regex=True)
 ```
 
 * Haversine
@@ -619,4 +817,35 @@ def manhattan(s_lat, s_lng, e_lat, e_lng):
     a = haversine(s_lat, s_lng, s_lat, e_lng)
     b = haversine(s_lat, s_lng, e_lat, s_lng)
     return a + b
+```
+
+## Random
+
+* Union two categorical columns - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.types.union_categoricals.html#pandas.api.types.union_categoricals)
+```python
+from pandas.api.types import union_categoricals
+
+food = pd.Categorical(["burger king", "wendys"])
+food_2 = pd.Categorical(["burger king", "chipotle"])
+
+union_categoricals([food, food_2])
+```
+
+* Testing
+```python
+from pandas.util.testing import assert_frame_equal
+
+# Methods for Series and Index as well
+assert_frame_equal(df_1, df_2)
+```
+
+* Infer column dtype, useful to remap column dtypes [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.types.infer_dtype.html#pandas.api.types.infer_dtype)
+```python
+from pandas.api.types import infer_dtype
+
+infer_dtype(["john", np.nan, "jack"], skipna=True)
+# string
+
+infer_dtype(["john", np.nan, "jack"], skipna=False)
+# mixed
 ```
