@@ -293,7 +293,7 @@ df["steps_walked"].where(df["steps_walked"] > 0, 0)
 df.drop(["column_a", "column_b"], axis = 1)
 ```
 
-* Dropping rows - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.drop_duplicates.html#pandas.DataFrame.drop_duplicates)
+* Dropping duplicate rows - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.drop_duplicates.html#pandas.DataFrame.drop_duplicates)
 ```python
 df.drop_duplicates(subset=["order_date", "product"], keep="first")
 ```
@@ -304,7 +304,7 @@ df.drop_duplicates(subset=["order_date", "product"], keep="first")
 df.dropna(thresh = len(df) * .9, axis = 1)
 ```
 
-* Replacing using `df.fillna()` - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.fillna.html)
+* Replacing using `fillna()` - [documentation](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.fillna.html)
 ```python
 # Impute DataFrame with all zeroes
 df.fillna(0)
@@ -615,7 +615,7 @@ df.sort_values(by = ["customer_id", "order_date"])\
 df["salary"].rank(pct=True)
 ```
 
-* Occurences of word in row
+* Occurrences of word in row
 ```python
 import re
 
@@ -830,7 +830,7 @@ def haversine(s_lat, s_lng, e_lat, e_lng):
 
     return 2 * R * np.arcsin(np.sqrt(d))
 
-# Convert pd.Series() -> np.ndarray()
+
 df['distance'] = haversine(
     df["start_lat"].values,
     df["start_long"].values,
