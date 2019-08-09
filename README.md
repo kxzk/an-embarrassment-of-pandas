@@ -346,8 +346,9 @@ df = df[(df.T != 0).any()]
 
 ## Method Chaining
 
+* Chaining multiple operations
 ```python
-(pd.read_csv('employee_salaries.csv')
+(pd.read_csv("employee_salaries.csv")
     .query("salary > 0")
     .assign(sex = lambda df: df["sex"].replace({"female": 1, "male: 0}),
             age = lambda df: pd.cut(df["age"].fillna(df["age"].median()),
@@ -387,7 +388,7 @@ def replace_and_convert(df, col, orig, new, dtype):
 
 ## Aggregation
 
-* Use `as_index = False` to avoid `reset_index()` if index isn't desired
+* Use `as_index = False` to avoid setting index
 ```python
 # this
 df.groupby("dimension", as_index = False)["measure"].sum()
@@ -658,7 +659,9 @@ df.sort_values(by = "variable").groupby("dimension").first()
 
 * MinMax normalization
 ```python
-df["salary_minmax"] = (df["salary"] - df["salary"].min()) / (df["salary"].max() - df["salary"].min())
+df["salary_minmax"] = (
+    df["salary"] - df["salary"].min()) / (df["salary"].max() - df["salary"].min()
+)
 ```
 
 * Z-score normalization
@@ -828,7 +831,12 @@ def haversine(s_lat, s_lng, e_lat, e_lng):
     return 2 * R * np.arcsin(np.sqrt(d))
 
 # Convert pd.Series() -> np.ndarray()
-df['distance'] = haversine(df["start_lat"].values, df["start_long"].values, df["end_lat"].values, df["end_long"].values)
+df['distance'] = haversine(
+    df["start_lat"].values,
+    df["start_long"].values,
+    df["end_lat"].values,
+    df["end_long"].values
+)
 ```
 
 * Manhattan
