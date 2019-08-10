@@ -223,6 +223,11 @@ df.select_dtypes(include = "number")
 df.select_dtypes(exclude = "object")
 ```
 
+* Apply function to multiple columns of the same data type
+```python
+df.select_dtypes(include = "object").apply(lambda x: x.str.lower())
+```
+
 * Reverse column order
 ```python
 df.loc[:, ::-1]
