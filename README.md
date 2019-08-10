@@ -225,7 +225,10 @@ df.select_dtypes(exclude = "object")
 
 * Apply function to multiple columns of the same data type
 ```python
-df.select_dtypes(include = "object").apply(lambda x: x.str.lower())
+# Specify columns, so DataFrame isn't overwritten
+df[["first_name", "last_name", "email"]] = df.select_dtypes(
+    include = "object").apply(lambda x: x.str.lower()
+)
 ```
 
 * Reverse column order
