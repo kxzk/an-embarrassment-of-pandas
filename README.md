@@ -217,6 +217,15 @@ pd.merge(df1, df2, on = "key")
 pd.merge(df1, df2, right_on = ["right_key"], left_on = ["left_key"], how = "left")
 ```
 
+* Anti-Join
+```python
+def anti_join(x, y, on):
+    """Return rows in x which are not present in y"""
+    ans = pd.merge(left=x, right=y, how='left', indicator=True, on=on)
+    ans = ans.loc[ans._merge == 'left_only', :].drop(columns='_merge')
+    return ans
+```
+
 * Select columns based on data type
 ```python
 df.select_dtypes(include = "number")
